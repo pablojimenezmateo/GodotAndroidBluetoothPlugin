@@ -95,6 +95,7 @@ public class BluetoothManager extends GodotPlugin {
         return Arrays.asList("sendDebugSignal",
                 "bluetoothStatus",
                 "scan",
+                "stopScan",
                 "hasLocationPermissions",
                 "locationStatus",
                 "connect",
@@ -154,12 +155,18 @@ public class BluetoothManager extends GodotPlugin {
 
                 scanning = true;
                 bluetoothLeScanner.startScan(leScanCallback);
-            } else {
-                scanning = false;
-                bluetoothLeScanner.stopScan(leScanCallback);
             }
         } else {
             sendDebugSignal("Cannot start a scan because you do not have location permissions");
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    public void stopScan() {
+
+        if (scanning) {
+            scanning = false;
+            bluetoothLeScanner.stopScan(leScanCallback);
         }
     }
 
@@ -258,62 +265,72 @@ public class BluetoothManager extends GodotPlugin {
     // Device connect call back
     private final BluetoothGattCallback btleGattCallback = new BluetoothGattCallback() {
 
-        @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
-           /* // this will get called anytime you perform a read or write characteristic operation
-            MainActivity.this.runOnUiThread(new Runnable() {
-                public void run() {
-                    peripheralTextView.append("device read or wrote to\n");
-                }
-            });*/
-            sendDebugSignal("onCharacteristicChanged");
-        }
-
         @SuppressLint("MissingPermission")
         @Override
         // Called when a devices connects or disconnects
         public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
-            switch (newState) {
-                case BluetoothProfile.STATE_DISCONNECTED:
 
-                    emitSignal("_on_connection_status_change", "disconnected");
-                    break;
-                case BluetoothProfile.STATE_CONNECTED:
-                    emitSignal("_on_connection_status_change", "connected");
+            if (status == BluetoothGatt.GATT_SUCCESS) {
 
-                    // Discover services and characteristics for this device
-                    bluetoothGatt.discoverServices();
-                    break;
+                switch (newState) {
+                    case BluetoothProfile.STATE_DISCONNECTED:
+
+                        emitSignal("_on_connection_status_change", "disconnected");
+                        break;
+                    case BluetoothProfile.STATE_CONNECTED:
+                        emitSignal("_on_connection_status_change", "connected");
+
+                        // Discover services and characteristics for this device
+                        bluetoothGatt.discoverServices();
+                        break;
+                }
+            } else { // There was an issue connecting
+
+                sendDebugSignal(Integer.toString(status));
             }
         }
 
-
         @Override
+        // Called after a BluetoothGatt.discoverServices() call
         public void onServicesDiscovered(final BluetoothGatt gatt, final int status) {
 
             sendDebugSignal("onServicesDiscovered");
-
-            /*// this will get called after the client initiates a 			BluetoothGatt.discoverServices() call
-            MainActivity.this.runOnUiThread(new Runnable() {
-                public void run() {
-                    peripheralTextView.append("device services have been discovered\n");
-                }
-            });
-            displayGattServices(bluetoothGatt.getServices());
-
-             */
+            listServicesAndCharacteristics(bluetoothGatt.getServices());
         }
 
         @Override
         // Result of a characteristic read operation
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          BluetoothGattCharacteristic characteristic,
+                                         //byte[] value, For Android Tiramisu we need this
                                          int status) {
-            sendDebugSignal("onServicesDiscovered");
 
-            /*if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
-            }*/
+            sendDebugSignal("onCharacteristicRead");
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                sendDebugSignal("onCharacteristicRead: SUCCESS");
+            }
+        }
+
+        @Override
+        // Result of a characteristic read operation
+        public void onCharacteristicWrite(BluetoothGatt gatt,
+                                         BluetoothGattCharacteristic characteristic,
+                                         int status) {
+            sendDebugSignal("onCharacteristicWrite");
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                //broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+                sendDebugSignal("onCharacteristicWrite: SUCCESS");
+            }
+        }
+
+        @Override
+        // Result of a characteristic read/write operation
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic,
+                                            //byte[] value, For Android Tiramisu we need this
+        ) {
+            sendDebugSignal("onCharacteristicChanged");
         }
     };
 
@@ -329,13 +346,14 @@ public class BluetoothManager extends GodotPlugin {
         bluetoothGatt.disconnect();
     }
 
-    private void displayGattServices(List<BluetoothGattService> gattServices) {
+    private void listServicesAndCharacteristics(List<BluetoothGattService> gattServices) {
         if (gattServices == null) return;
 
         // Loops through available GATT Services.
         for (BluetoothGattService gattService : gattServices) {
 
             final String uuid = gattService.getUuid().toString();
+
 
             sendDebugSignal("Service discovered: " + uuid);
 
