@@ -338,6 +338,7 @@ public class BluetoothManager extends GodotPlugin {
     @SuppressLint("MissingPermission")
     public void connect(String address) {
         sendDebugSignal("Connecting to device with address " + address);
+        stopScan();
         bluetoothGatt = devices.get(address).getDevice().connectGatt(context, false, btleGattCallback);
     }
 
