@@ -129,6 +129,7 @@ public class BluetoothManager extends GodotPlugin {
         signals.add(new SignalInfo("_on_bluetooth_status_change", String.class));
         signals.add(new SignalInfo("_on_location_status_change", String.class));
         signals.add(new SignalInfo("_on_connection_status_change", String.class));
+        signals.add(new SignalInfo("_on_characteristic_read", org.godotengine.godot.Dictionary.class));
 
         return signals;
     }
@@ -327,8 +328,8 @@ public class BluetoothManager extends GodotPlugin {
 
         @Override
         // Result of a characteristic read/write operation
-        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic,
-                                            //byte[] value, For Android Tiramisu we need this
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic
+                                            //,byte[] value, For Android Tiramisu we need this
         ) {
             sendDebugSignal("onCharacteristicChanged");
         }
@@ -352,20 +353,47 @@ public class BluetoothManager extends GodotPlugin {
         // Loops through available GATT Services.
         for (BluetoothGattService gattService : gattServices) {
 
-            final String uuid = gattService.getUuid().toString();
+            final String serviceUuid = gattService.getUuid().toString();
 
-
-            sendDebugSignal("Service discovered: " + uuid);
+            sendDebugSignal("Service discovered: " + serviceUuid);
 
             List<BluetoothGattCharacteristic> gattCharacteristics =
                     gattService.getCharacteristics();
+
+            org.godotengine.godot.Dictionary characteristicData;
 
             // Loops through available Characteristics.
             for (BluetoothGattCharacteristic gattCharacteristic :
                     gattCharacteristics) {
 
-                final String charUuid = gattCharacteristic.getUuid().toString();
-                sendDebugSignal("Characteristic discovered for service: " + charUuid);
+                characteristicData = new org.godotengine.godot.Dictionary();
+
+                final String characteristicUuid = gattCharacteristic.getUuid().toString();
+
+                characteristicData.put("service_uuid", serviceUuid);
+                characteristicData.put("characteristic_uuid", characteristicUuid);
+                characteristicData.put("real_mask", gattCharacteristic.getProperties());
+
+                // Set all 3 properties to false
+                characteristicData.put("readable", false);
+                characteristicData.put("writable", false);
+                characteristicData.put("writable_no_response", false);
+
+
+                if ((gattCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) != 0) {
+                    characteristicData.put("readable", true);
+                }
+
+                if ((gattCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE) != 0) {
+                    characteristicData.put("writable", true);
+                }
+
+                if ((gattCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) {
+                    characteristicData.put("writable_no_response", true);
+                }
+
+                sendDebugSignal("Characteristic discovered for service: " + characteristicUuid);
+                emitSignal("_on_characteristic_read", characteristicData);
             }
         }
     }
