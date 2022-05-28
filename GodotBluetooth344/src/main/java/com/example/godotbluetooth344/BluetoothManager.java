@@ -49,6 +49,7 @@ public class BluetoothManager extends GodotPlugin {
 
     // Specific
     private boolean scanning = false;
+    private boolean connected = false;
     private Map<String, ScanResult> devices = new HashMap<String, ScanResult>(); // Key is the address
 
     // Permissions related functions
@@ -99,7 +100,8 @@ public class BluetoothManager extends GodotPlugin {
                 "hasLocationPermissions",
                 "locationStatus",
                 "connect",
-                "disconnect");
+                "disconnect",
+                "listServicesAndCharacteristics");
     }
 
     public void sendDebugSignal(String s) {
@@ -216,6 +218,15 @@ public class BluetoothManager extends GodotPlugin {
         return true;
     }
 
+    @SuppressLint("MissingPermission")
+    public void listServicesAndCharacteristics() {
+
+        if (connected) {
+            // Discover services and characteristics for this device
+            bluetoothGatt.discoverServices();
+        }
+    }
+
     // This monitors the bluetooth status
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -277,12 +288,13 @@ public class BluetoothManager extends GodotPlugin {
                     case BluetoothProfile.STATE_DISCONNECTED:
 
                         emitSignal("_on_connection_status_change", "disconnected");
+                        connected = false;
+
                         break;
                     case BluetoothProfile.STATE_CONNECTED:
                         emitSignal("_on_connection_status_change", "connected");
+                        connected = true;
 
-                        // Discover services and characteristics for this device
-                        bluetoothGatt.discoverServices();
                         break;
                 }
             } else { // There was an issue connecting
@@ -295,8 +307,7 @@ public class BluetoothManager extends GodotPlugin {
         // Called after a BluetoothGatt.discoverServices() call
         public void onServicesDiscovered(final BluetoothGatt gatt, final int status) {
 
-            sendDebugSignal("onServicesDiscovered");
-            listServicesAndCharacteristics(bluetoothGatt.getServices());
+            sendServicesAndCharacteristics(bluetoothGatt.getServices());
         }
 
         @Override
@@ -348,15 +359,13 @@ public class BluetoothManager extends GodotPlugin {
         bluetoothGatt.disconnect();
     }
 
-    private void listServicesAndCharacteristics(List<BluetoothGattService> gattServices) {
+    private void sendServicesAndCharacteristics(List<BluetoothGattService> gattServices) {
         if (gattServices == null) return;
 
         // Loops through available GATT Services.
         for (BluetoothGattService gattService : gattServices) {
 
             final String serviceUuid = gattService.getUuid().toString();
-
-            sendDebugSignal("Service discovered: " + serviceUuid);
 
             List<BluetoothGattCharacteristic> gattCharacteristics =
                     gattService.getCharacteristics();
@@ -380,7 +389,6 @@ public class BluetoothManager extends GodotPlugin {
                 characteristicData.put("writable", false);
                 characteristicData.put("writable_no_response", false);
 
-
                 if ((gattCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) != 0) {
                     characteristicData.put("readable", true);
                 }
@@ -393,7 +401,6 @@ public class BluetoothManager extends GodotPlugin {
                     characteristicData.put("writable_no_response", true);
                 }
 
-                sendDebugSignal("Characteristic discovered for service: " + characteristicUuid);
                 emitSignal("_on_characteristic_read", characteristicData);
             }
         }
