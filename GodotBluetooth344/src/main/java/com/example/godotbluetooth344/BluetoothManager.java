@@ -103,7 +103,7 @@ public class BluetoothManager extends GodotPlugin {
                 "disconnect",
                 "listServicesAndCharacteristics",
                 "subscribeToCharacteristic",
-                "unsubscribeToCharacteristic",
+                "unsubscribeFromCharacteristic",
                 "writeBytesToCharacteristic",
                 "writeStringToCharacteristic",
                 "readFromCharacteristic");
@@ -570,7 +570,7 @@ public class BluetoothManager extends GodotPlugin {
         }
     }
 
-    private void unsubscribeToCharacteristic(String serviceUUID, String characteristicUUID) {
+    private void unsubscribeFromCharacteristic(String serviceUUID, String characteristicUUID) {
 
         if (connected) {
 
