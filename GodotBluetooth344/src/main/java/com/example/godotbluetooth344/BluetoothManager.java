@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -30,11 +31,13 @@ import org.godotengine.godot.Godot;
 import org.godotengine.godot.plugin.GodotPlugin;
 import org.godotengine.godot.plugin.SignalInfo;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 public class BluetoothManager extends GodotPlugin {
 
@@ -101,7 +104,11 @@ public class BluetoothManager extends GodotPlugin {
                 "locationStatus",
                 "connect",
                 "disconnect",
-                "listServicesAndCharacteristics");
+                "listServicesAndCharacteristics",
+                "subscribeToCharacteristic",
+                "unsubscribeToCharacteristic",
+                "writeToCharacteristic",
+                "readFromCharacteristic");
     }
 
     public void sendDebugSignal(String s) {
@@ -131,6 +138,7 @@ public class BluetoothManager extends GodotPlugin {
         signals.add(new SignalInfo("_on_bluetooth_status_change", String.class));
         signals.add(new SignalInfo("_on_location_status_change", String.class));
         signals.add(new SignalInfo("_on_connection_status_change", String.class));
+        signals.add(new SignalInfo("_on_characteristic_reading", String.class));
         signals.add(new SignalInfo("_on_characteristic_read", org.godotengine.godot.Dictionary.class));
 
         return signals;
@@ -292,8 +300,11 @@ public class BluetoothManager extends GodotPlugin {
 
                         break;
                     case BluetoothProfile.STATE_CONNECTED:
-                        emitSignal("_on_connection_status_change", "connected");
                         connected = true;
+                        // Read services and characteristics
+                        listServicesAndCharacteristics();
+
+                        emitSignal("_on_connection_status_change", "connected");
 
                         break;
                 }
@@ -321,6 +332,9 @@ public class BluetoothManager extends GodotPlugin {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 sendDebugSignal("onCharacteristicRead: SUCCESS");
+            } else {
+
+                sendDebugSignal("onCharacteristicRead: " + Integer.toString(status));
             }
         }
 
@@ -342,25 +356,42 @@ public class BluetoothManager extends GodotPlugin {
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic
                                             //,byte[] value, For Android Tiramisu we need this
         ) {
-            sendDebugSignal("onCharacteristicChanged");
+            String uuid = characteristic.getUuid().toString();
+            byte[] value = characteristic.getValue();
+            String s = Arrays.toString(value);
+            String s1 = new String(value, StandardCharsets.ISO_8859_1);
+
+            sendDebugSignal("onCharacteristicChanged " + uuid);
+            sendDebugSignal("onCharacteristicChanged " + Integer.toString(value.length));
+            sendDebugSignal("onCharacteristicChanged " + s);
+            sendDebugSignal("onCharacteristicChanged " + s1);
+
         }
     };
 
     @SuppressLint("MissingPermission")
     public void connect(String address) {
-        sendDebugSignal("Connecting to device with address " + address);
-        stopScan();
-        bluetoothGatt = devices.get(address).getDevice().connectGatt(context, false, btleGattCallback);
+
+        if (!connected) {
+            sendDebugSignal("Connecting to device with address " + address);
+            stopScan();
+            bluetoothGatt = devices.get(address).getDevice().connectGatt(context, false, btleGattCallback);
+        }
     }
 
     @SuppressLint("MissingPermission")
     public void disconnect() {
-        sendDebugSignal("Disconnecting device");
-        bluetoothGatt.disconnect();
+
+        if (connected) {
+            sendDebugSignal("Disconnecting device");
+            bluetoothGatt.disconnect();
+        }
     }
 
     private void sendServicesAndCharacteristics(List<BluetoothGattService> gattServices) {
         if (gattServices == null) return;
+
+        emitSignal("_on_characteristic_reading", "processing");
 
         // Loops through available GATT Services.
         for (BluetoothGattService gattService : gattServices) {
@@ -404,13 +435,82 @@ public class BluetoothManager extends GodotPlugin {
                 emitSignal("_on_characteristic_read", characteristicData);
             }
         }
+
+        emitSignal("_on_characteristic_reading", "done");
+    }
+
+    // Read from characteristic
+    @SuppressLint("MissingPermission")
+    private void readFromCharacteristic(String serviceUUID, String characteristicUUID) {
+
+        if (connected) {
+
+            UUID service = UUID.fromString(serviceUUID);
+            UUID characteristic = UUID.fromString(characteristicUUID);
+
+            BluetoothGattCharacteristic c = bluetoothGatt.getService(service).getCharacteristic(characteristic);
+
+            bluetoothGatt.readCharacteristic(c);
+        }
+    }
+
+    // Write to characteristic, automatically detects the write type
+    @SuppressLint("MissingPermission")
+    private void writeToCharacteristic(String serviceUUID, String characteristicUUID, String data) {
+
+        if (connected) {
+
+            UUID service = UUID.fromString(serviceUUID);
+            UUID characteristic = UUID.fromString(characteristicUUID);
+
+            BluetoothGattCharacteristic c = bluetoothGatt.getService(service).getCharacteristic(characteristic);
+            c.setValue(data);
+
+            if (c.getWriteType() == BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) {
+
+                c.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+
+            } else if (c.getWriteType() == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE ) {
+
+                c.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+            }
+
+            bluetoothGatt.writeCharacteristic(c);
+        }
+    }
+
+    // Subscribe to characteristic
+    @SuppressLint("MissingPermission")
+    private void subscribeToCharacteristic(String serviceUUID, String characteristicUUID) {
+
+        if (connected) {
+
+            UUID service = UUID.fromString(serviceUUID);
+            UUID characteristic = UUID.fromString(characteristicUUID);
+
+            BluetoothGattCharacteristic c = bluetoothGatt.getService(service).getCharacteristic(characteristic);
+            bluetoothGatt.setCharacteristicNotification(c,true);
+
+
+            // Set the Client Characteristic Config Descriptor to allow server initiated updates
+            UUID CONFIG_DESCRIPTOR = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+            BluetoothGattDescriptor desc = c.getDescriptor(CONFIG_DESCRIPTOR);
+            desc.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+            bluetoothGatt.writeDescriptor(desc);
+
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void unsubscribeToCharacteristic(String serviceUUID, String characteristicUUID) {
+
+        if (connected) {
+
+            UUID service = UUID.fromString(serviceUUID);
+            UUID characteristic = UUID.fromString(characteristicUUID);
+
+            BluetoothGattCharacteristic c = bluetoothGatt.getService(service).getCharacteristic(characteristic);
+            bluetoothGatt.setCharacteristicNotification(c,false);
+        }
     }
 }
-
-/*
-
-
-Received F3:60:26:8A:AD:78
-Received Take
-
- */
