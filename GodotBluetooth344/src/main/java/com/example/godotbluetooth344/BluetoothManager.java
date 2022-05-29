@@ -1,7 +1,6 @@
 package com.example.godotbluetooth344;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -21,7 +20,6 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Handler;
 import android.util.ArraySet;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
@@ -31,7 +29,6 @@ import org.godotengine.godot.Godot;
 import org.godotengine.godot.plugin.GodotPlugin;
 import org.godotengine.godot.plugin.SignalInfo;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -75,7 +72,7 @@ public class BluetoothManager extends GodotPlugin {
         this.context = getActivity().getApplicationContext();
 
         // Get the location manager
-        this.locationManager = (LocationManager)this.context.getSystemService(Context.LOCATION_SERVICE);
+        this.locationManager = (LocationManager) this.context.getSystemService(Context.LOCATION_SERVICE);
 
         // Register the listener to the Bluetooth Status
         IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
@@ -132,7 +129,7 @@ public class BluetoothManager extends GodotPlugin {
     @NonNull
     @Override
     public Set<SignalInfo> getPluginSignals() {
-        Set<SignalInfo>  signals = new ArraySet<>();
+        Set<SignalInfo> signals = new ArraySet<>();
 
         signals.add(new SignalInfo("_on_debug_message", String.class));
         signals.add(new SignalInfo("_on_device_found", org.godotengine.godot.Dictionary.class));
@@ -146,7 +143,6 @@ public class BluetoothManager extends GodotPlugin {
         return signals;
     }
 
-    @SuppressLint("MissingPermission")
     public void scan() {
 
         if (hasLocationPermissions()) {
@@ -160,6 +156,11 @@ public class BluetoothManager extends GodotPlugin {
                         scanning = false;
                         sendDebugSignal("Stopping scan");
 
+                        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+
+                            sendDebugSignal("Cannot stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
+                            return;
+                        }
                         bluetoothLeScanner.stopScan(leScanCallback);
                     }
                 }, SCAN_PERIOD);
@@ -174,11 +175,15 @@ public class BluetoothManager extends GodotPlugin {
         }
     }
 
-    @SuppressLint("MissingPermission")
     public void stopScan() {
 
         if (scanning) {
             scanning = false;
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+
+                sendDebugSignal("Cannot stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
+                return;
+            }
             bluetoothLeScanner.stopScan(leScanCallback);
         }
     }
@@ -228,11 +233,16 @@ public class BluetoothManager extends GodotPlugin {
         return true;
     }
 
-    @SuppressLint("MissingPermission")
     public void listServicesAndCharacteristics() {
 
         if (connected) {
             // Discover services and characteristics for this device
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                sendDebugSignal("Cannot list services because you do not have Manifest.permission.BLUETOOTH_CONNECT");
+
+                return;
+            }
+
             bluetoothGatt.discoverServices();
         }
     }
@@ -275,9 +285,14 @@ public class BluetoothManager extends GodotPlugin {
                 boolean isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
                 boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-                if (isGpsEnabled || isNetworkEnabled) {
+                if (isGpsEnabled) {
+
+                    emitSignal("_on_location_status_change", "on");
+                } else if (isNetworkEnabled) {
+
                     emitSignal("_on_location_status_change", "on");
                 } else {
+
                     emitSignal("_on_location_status_change", "off");
                 }
             }
@@ -287,7 +302,6 @@ public class BluetoothManager extends GodotPlugin {
     // Device connect call back
     private final BluetoothGattCallback btleGattCallback = new BluetoothGattCallback() {
 
-        @SuppressLint("MissingPermission")
         @Override
         // Called when a devices connects or disconnects
         public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
@@ -343,8 +357,8 @@ public class BluetoothManager extends GodotPlugin {
         @Override
         // Result of a characteristic read operation
         public void onCharacteristicWrite(BluetoothGatt gatt,
-                                         BluetoothGattCharacteristic characteristic,
-                                         int status) {
+                                          BluetoothGattCharacteristic characteristic,
+                                          int status) {
             sendDebugSignal("onCharacteristicWrite");
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -375,21 +389,29 @@ public class BluetoothManager extends GodotPlugin {
         }
     };
 
-    @SuppressLint("MissingPermission")
     public void connect(String address) {
 
         if (!connected) {
             sendDebugSignal("Connecting to device with address " + address);
             stopScan();
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                sendDebugSignal("Cannot connect because you do not have Manifest.permission.BLUETOOTH_CONNECT");
+
+                return;
+            }
             bluetoothGatt = devices.get(address).getDevice().connectGatt(context, false, btleGattCallback);
         }
     }
 
-    @SuppressLint("MissingPermission")
     public void disconnect() {
 
         if (connected) {
             sendDebugSignal("Disconnecting device");
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                sendDebugSignal("Cannot disconnect because you do not have Manifest.permission.BLUETOOTH_CONNECT");
+
+                return;
+            }
             bluetoothGatt.disconnect();
         }
     }
@@ -446,7 +468,6 @@ public class BluetoothManager extends GodotPlugin {
     }
 
     // Read from characteristic
-    @SuppressLint("MissingPermission")
     private void readFromCharacteristic(String serviceUUID, String characteristicUUID) {
 
         if (connected) {
@@ -456,12 +477,17 @@ public class BluetoothManager extends GodotPlugin {
 
             BluetoothGattCharacteristic c = bluetoothGatt.getService(service).getCharacteristic(characteristic);
 
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                sendDebugSignal("Cannot read characteristics because you do not have Manifest.permission.BLUETOOTH_CONNECT");
+
+                return;
+            }
+
             bluetoothGatt.readCharacteristic(c);
         }
     }
 
     // Write bytes to characteristic, automatically detects the write type
-    @SuppressLint("MissingPermission")
     private void writeBytesToCharacteristic(String serviceUUID, String characteristicUUID, byte[] data) {
 
         if (connected) {
@@ -476,17 +502,21 @@ public class BluetoothManager extends GodotPlugin {
 
                 c.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
 
-            } else if (c.getWriteType() == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE ) {
+            } else if (c.getWriteType() == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) {
 
                 c.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
             }
 
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                sendDebugSignal("Cannot write characteristic because you do not have Manifest.permission.BLUETOOTH_CONNECT");
+
+                return;
+            }
             bluetoothGatt.writeCharacteristic(c);
         }
     }
 
     // Write bytes to characteristic, automatically detects the write type
-    @SuppressLint("MissingPermission")
     private void writeStringToCharacteristic(String serviceUUID, String characteristicUUID, String data) {
 
         if (connected) {
@@ -501,17 +531,21 @@ public class BluetoothManager extends GodotPlugin {
 
                 c.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
 
-            } else if (c.getWriteType() == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE ) {
+            } else if (c.getWriteType() == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) {
 
                 c.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
             }
 
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                sendDebugSignal("Cannot write characteristic because you do not have Manifest.permission.BLUETOOTH_CONNECT");
+
+                return;
+            }
             bluetoothGatt.writeCharacteristic(c);
         }
     }
 
     // Subscribe to characteristic
-    @SuppressLint("MissingPermission")
     private void subscribeToCharacteristic(String serviceUUID, String characteristicUUID) {
 
         if (connected) {
@@ -520,8 +554,12 @@ public class BluetoothManager extends GodotPlugin {
             UUID characteristic = UUID.fromString(characteristicUUID);
 
             BluetoothGattCharacteristic c = bluetoothGatt.getService(service).getCharacteristic(characteristic);
-            bluetoothGatt.setCharacteristicNotification(c,true);
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                sendDebugSignal("Cannot subscribe to characteristic because you do not have Manifest.permission.BLUETOOTH_CONNECT");
 
+                return;
+            }
+            bluetoothGatt.setCharacteristicNotification(c, true);
 
             // Set the Client Characteristic Config Descriptor to allow server initiated updates
             UUID CONFIG_DESCRIPTOR = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
@@ -532,7 +570,6 @@ public class BluetoothManager extends GodotPlugin {
         }
     }
 
-    @SuppressLint("MissingPermission")
     private void unsubscribeToCharacteristic(String serviceUUID, String characteristicUUID) {
 
         if (connected) {
@@ -540,8 +577,20 @@ public class BluetoothManager extends GodotPlugin {
             UUID service = UUID.fromString(serviceUUID);
             UUID characteristic = UUID.fromString(characteristicUUID);
 
+            // Set the Client Characteristic Config Descriptor to disable server initiated updates
+            UUID CONFIG_DESCRIPTOR = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
             BluetoothGattCharacteristic c = bluetoothGatt.getService(service).getCharacteristic(characteristic);
-            bluetoothGatt.setCharacteristicNotification(c,false);
+
+            BluetoothGattDescriptor desc = c.getDescriptor(CONFIG_DESCRIPTOR);
+            desc.setValue(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
+
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                sendDebugSignal("Cannot unsubscribe from characteristic because you do not have Manifest.permission.BLUETOOTH_CONNECT");
+
+                return;
+            }
+
+            bluetoothGatt.writeDescriptor(desc);
         }
     }
 }

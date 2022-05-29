@@ -7,6 +7,9 @@
             android:name="org.godotengine.plugin.v1.GodotBluetooth344"
             android:value="com.example.godotbluetooth344.BluetoothManager" />
         />
+
+        <activity android:name="com.example.godotbluetooth344.PermissionsActivity"
+            android:launchMode="singleTask"/>
     </application>
 
     <!-- Request legacy Bluetooth permissions on older devices. -->
