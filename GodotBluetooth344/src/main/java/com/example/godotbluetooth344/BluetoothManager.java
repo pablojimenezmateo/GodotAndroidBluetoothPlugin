@@ -107,7 +107,8 @@ public class BluetoothManager extends GodotPlugin {
                 "listServicesAndCharacteristics",
                 "subscribeToCharacteristic",
                 "unsubscribeToCharacteristic",
-                "writeToCharacteristic",
+                "writeBytesToCharacteristic",
+                "writeStringToCharacteristic",
                 "readFromCharacteristic");
     }
 
@@ -138,7 +139,8 @@ public class BluetoothManager extends GodotPlugin {
         signals.add(new SignalInfo("_on_bluetooth_status_change", String.class));
         signals.add(new SignalInfo("_on_location_status_change", String.class));
         signals.add(new SignalInfo("_on_connection_status_change", String.class));
-        signals.add(new SignalInfo("_on_characteristic_reading", String.class));
+        signals.add(new SignalInfo("_on_characteristic_finding", String.class));
+        signals.add(new SignalInfo("_on_characteristic_found", org.godotengine.godot.Dictionary.class));
         signals.add(new SignalInfo("_on_characteristic_read", org.godotengine.godot.Dictionary.class));
 
         return signals;
@@ -356,16 +358,20 @@ public class BluetoothManager extends GodotPlugin {
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic
                                             //,byte[] value, For Android Tiramisu we need this
         ) {
-            String uuid = characteristic.getUuid().toString();
-            byte[] value = characteristic.getValue();
-            String s = Arrays.toString(value);
-            String s1 = new String(value, StandardCharsets.ISO_8859_1);
 
-            sendDebugSignal("onCharacteristicChanged " + uuid);
-            sendDebugSignal("onCharacteristicChanged " + Integer.toString(value.length));
-            sendDebugSignal("onCharacteristicChanged " + s);
-            sendDebugSignal("onCharacteristicChanged " + s1);
+            org.godotengine.godot.Dictionary data = new org.godotengine.godot.Dictionary();
 
+            String characteristic_uuid = characteristic.getUuid().toString();
+            String service_uuid = characteristic.getService().getUuid().toString();
+            byte[] bytes = characteristic.getValue();
+
+            sendDebugSignal("onCharacteristicChanged " + characteristic_uuid);
+
+            data.put("service_uuid", service_uuid);
+            data.put("characteristic_uuid", characteristic_uuid);
+            data.put("bytes", bytes);
+
+            emitSignal("_on_characteristic_read", data);
         }
     };
 
@@ -391,7 +397,7 @@ public class BluetoothManager extends GodotPlugin {
     private void sendServicesAndCharacteristics(List<BluetoothGattService> gattServices) {
         if (gattServices == null) return;
 
-        emitSignal("_on_characteristic_reading", "processing");
+        emitSignal("_on_characteristic_finding", "processing");
 
         // Loops through available GATT Services.
         for (BluetoothGattService gattService : gattServices) {
@@ -432,11 +438,11 @@ public class BluetoothManager extends GodotPlugin {
                     characteristicData.put("writable_no_response", true);
                 }
 
-                emitSignal("_on_characteristic_read", characteristicData);
+                emitSignal("_on_characteristic_found", characteristicData);
             }
         }
 
-        emitSignal("_on_characteristic_reading", "done");
+        emitSignal("_on_characteristic_finding", "done");
     }
 
     // Read from characteristic
@@ -454,9 +460,34 @@ public class BluetoothManager extends GodotPlugin {
         }
     }
 
-    // Write to characteristic, automatically detects the write type
+    // Write bytes to characteristic, automatically detects the write type
     @SuppressLint("MissingPermission")
-    private void writeToCharacteristic(String serviceUUID, String characteristicUUID, String data) {
+    private void writeBytesToCharacteristic(String serviceUUID, String characteristicUUID, byte[] data) {
+
+        if (connected) {
+
+            UUID service = UUID.fromString(serviceUUID);
+            UUID characteristic = UUID.fromString(characteristicUUID);
+
+            BluetoothGattCharacteristic c = bluetoothGatt.getService(service).getCharacteristic(characteristic);
+            c.setValue(data);
+
+            if (c.getWriteType() == BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) {
+
+                c.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+
+            } else if (c.getWriteType() == BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE ) {
+
+                c.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+            }
+
+            bluetoothGatt.writeCharacteristic(c);
+        }
+    }
+
+    // Write bytes to characteristic, automatically detects the write type
+    @SuppressLint("MissingPermission")
+    private void writeStringToCharacteristic(String serviceUUID, String characteristicUUID, String data) {
 
         if (connected) {
 
