@@ -1,4 +1,4 @@
-# Godot Android Bluetooth Pugin
+# Godot Android Bluetooth Plugin
 
 This is the Android Studio project that implements all the logic to use Bluetooth LTE from Godot. Checkout the [Godot demo](https://github.com/pablojimenezmateo/GodotAndroidBluetoothDemo) to see a working example.
 
