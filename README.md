@@ -155,7 +155,7 @@ ___
 
 **reportDuplicates**
 When set true, devices previously found in a scan will be reported with _on_device_found.
-
+---
 ### Methods
 
 **scan**
