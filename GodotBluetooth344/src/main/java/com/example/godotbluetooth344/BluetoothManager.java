@@ -53,7 +53,7 @@ public class BluetoothManager extends GodotPlugin {
     private Map<String, ScanResult> devices = new HashMap<String, ScanResult>(); // Key is the address
 
 
-    public boolean reportDuplicates = true;
+    private boolean reportDuplicates = true;
 
 
     // Permissions related functions
@@ -93,6 +93,17 @@ public class BluetoothManager extends GodotPlugin {
         return "GodotBluetooth344";
     }
 
+    public void setReportDuplicates(boolean report)
+    {
+        reportDuplicates = report;
+    }
+
+    public boolean getReportDuplicates()
+    {
+        return reportDuplicates;
+    }
+
+
     @SuppressWarnings("deprecation")
     @NonNull
     @Override
@@ -110,7 +121,9 @@ public class BluetoothManager extends GodotPlugin {
                 "unsubscribeFromCharacteristic",
                 "writeBytesToCharacteristic",
                 "writeStringToCharacteristic",
-                "readFromCharacteristic");
+                "readFromCharacteristic",
+                "setReportDuplicates",
+                "getReportDuplicates");
     }
 
     public void sendDebugSignal(String s) {
