@@ -52,6 +52,7 @@ Received arguments:
 	* address: MAC address of the device
 	* name: Name of the device
 	* rssi: Signal strength of the device in dBm
+    * manufacturerData: Scan Record of the device
 ___
 
 **_on_bluetooth_status_change**
@@ -150,6 +151,10 @@ Received arguments:
 	* characteristic_uuid: The characteristic UUID
 	* bytes: They raw bytes of the payload
 ___
+### Properties
+
+**reportDuplicates**
+When set true, devices previously found in a scan will be reported with _on_device_found.
 
 ### Methods
 
