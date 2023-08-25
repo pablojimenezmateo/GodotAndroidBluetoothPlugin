@@ -52,6 +52,10 @@ public class BluetoothManager extends GodotPlugin {
     private boolean connected = false;
     private Map<String, ScanResult> devices = new HashMap<String, ScanResult>(); // Key is the address
 
+
+    public boolean reportDuplicates = true;
+
+
     // Permissions related functions
     public boolean hasLocationPermissions() {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -121,7 +125,7 @@ public class BluetoothManager extends GodotPlugin {
         deviceData.put("name", newDevice.getScanRecord().getDeviceName());
         deviceData.put("address", newDevice.getDevice().getAddress());
         deviceData.put("rssi", newDevice.getRssi());
-
+        deviceData.put("manufacturerData", newDevice.getScanRecord());
         emitSignal("_on_device_found", deviceData);
     }
 
@@ -198,8 +202,9 @@ public class BluetoothManager extends GodotPlugin {
                     if (result != null && result.getDevice() != null && result.getDevice().getAddress() != null && result.getScanRecord().getDeviceName() != null) {
 
                         if (!devices.containsKey(result.getDevice().getAddress())) {
-
                             devices.put(result.getDevice().getAddress(), result);
+                            sendNewDevice(result);
+                        } else if (reportDuplicates) {
                             sendNewDevice(result);
                         }
                     }
