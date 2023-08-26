@@ -58,12 +58,15 @@ public class BluetoothManager extends GodotPlugin {
 
     // Permissions related functions
     public boolean hasLocationPermissions() {
+        sendDebugSignal("check user has Location Permissions");
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
                         != PackageManager.PERMISSION_GRANTED) {
+            sendDebugSignal("no, they don't. Sad Face");
             return false;
         } else {
+            sendDebugSignal("Yes, they do.");
             return true;
         }
     }
@@ -138,7 +141,10 @@ public class BluetoothManager extends GodotPlugin {
         deviceData.put("name", newDevice.getScanRecord().getDeviceName());
         deviceData.put("address", newDevice.getDevice().getAddress());
         deviceData.put("rssi", newDevice.getRssi());
-        deviceData.put("manufacturerData", newDevice.getScanRecord());
+        deviceData.put("manufacturerData", newDevice.getBytes());
+
+
+        //deviceData.put("manufacturerData", newDevice.getScanRecord());
         emitSignal("_on_device_found", deviceData);
     }
 
@@ -161,11 +167,11 @@ public class BluetoothManager extends GodotPlugin {
     }
 
     public void scan() {
-
+        sendDebugSignal("scanCalled");
         if (hasLocationPermissions()) {
-
+            sendDebugSignal("user hasLocationPermissions - yes");
             if (!scanning) {
-
+                sendDebugSignal("wasn't already scanning");
                 // Stops scanning after a predefined scan period.
                 handler.postDelayed(new Runnable() {
                     @Override
@@ -175,8 +181,8 @@ public class BluetoothManager extends GodotPlugin {
 
                         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
 
-                            sendDebugSignal("Cannot stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
-                            return;
+                            sendDebugSignal("might not stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
+                            //return;
                         }
                         bluetoothLeScanner.stopScan(leScanCallback);
                     }
@@ -185,6 +191,14 @@ public class BluetoothManager extends GodotPlugin {
                 sendDebugSignal("Start scan");
 
                 scanning = true;
+                sendDebugSignal("about to call bluetoothLeScanner.startScan");
+                if (bluetoothLeScanner == null)
+                {
+                    sendDebugSignal("oh, this is never going to work, bluetoothLeScanner is null!!");
+                }
+                else{
+                    sendDebugSignal("bluetoothLeScanner is not null, should be able to call it.");
+                }
                 bluetoothLeScanner.startScan(leScanCallback);
             }
         } else {
@@ -198,8 +212,8 @@ public class BluetoothManager extends GodotPlugin {
             scanning = false;
             if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
 
-                sendDebugSignal("Cannot stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
-                return;
+                sendDebugSignal("might not stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
+                //return;
             }
             bluetoothLeScanner.stopScan(leScanCallback);
         }
@@ -207,18 +221,22 @@ public class BluetoothManager extends GodotPlugin {
 
     private ScanCallback leScanCallback =
             new ScanCallback() {
-
                 @Override
                 public void onScanResult(int callbackType, ScanResult result) {
-
+                    sendDebugSignal("into leScanCallback");
                     // We are only interested in devices with name
                     if (result != null && result.getDevice() != null && result.getDevice().getAddress() != null && result.getScanRecord().getDeviceName() != null) {
-
+                        sendDebugSignal("we have a device with a name");
                         if (!devices.containsKey(result.getDevice().getAddress())) {
+                            sendDebugSignal("it's not a device we've seen before");
                             devices.put(result.getDevice().getAddress(), result);
                             sendNewDevice(result);
-                        } else if (reportDuplicates) {
-                            sendNewDevice(result);
+                        } else {
+                            sendDebugSignal("we've already seen this one.");
+                            if (reportDuplicates) {
+                                sendDebugSignal("...but reportDuplicates was set true, so send it anyway.");
+                                sendNewDevice(result);
+                            }
                         }
                     }
                 }
