@@ -58,15 +58,12 @@ public class BluetoothManager extends GodotPlugin {
 
     // Permissions related functions
     public boolean hasLocationPermissions() {
-        sendDebugSignal("check user has Location Permissions");
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION)
                         != PackageManager.PERMISSION_GRANTED) {
-            sendDebugSignal("no, they don't. Sad Face");
             return false;
         } else {
-            sendDebugSignal("Yes, they do.");
             return true;
         }
     }
@@ -143,8 +140,6 @@ public class BluetoothManager extends GodotPlugin {
         deviceData.put("rssi", newDevice.getRssi());
         deviceData.put("manufacturerData", newDevice.getScanRecord().getBytes());
 
-
-        //deviceData.put("manufacturerData", newDevice.getScanRecord());
         emitSignal("_on_device_found", deviceData);
     }
 
@@ -177,7 +172,7 @@ public class BluetoothManager extends GodotPlugin {
 
                         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
 
-                            sendDebugSignal("might not stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
+                            sendDebugSignal("Cannot stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
                             return;
                         }
                         bluetoothLeScanner.stopScan(leScanCallback);
@@ -198,8 +193,8 @@ public class BluetoothManager extends GodotPlugin {
             scanning = false;
             if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
 
-                sendDebugSignal("might not stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
-                //return;
+                sendDebugSignal("Cannot stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
+                return;
             }
             bluetoothLeScanner.stopScan(leScanCallback);
         }
