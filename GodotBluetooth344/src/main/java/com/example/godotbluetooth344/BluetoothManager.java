@@ -141,7 +141,7 @@ public class BluetoothManager extends GodotPlugin {
         deviceData.put("name", newDevice.getScanRecord().getDeviceName());
         deviceData.put("address", newDevice.getDevice().getAddress());
         deviceData.put("rssi", newDevice.getRssi());
-        deviceData.put("manufacturerData", newDevice.getBytes());
+        deviceData.put("manufacturerData", newDevice.getScanRecord().getBytes());
 
 
         //deviceData.put("manufacturerData", newDevice.getScanRecord());
