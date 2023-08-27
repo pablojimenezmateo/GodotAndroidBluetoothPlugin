@@ -11,6 +11,7 @@ import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -44,7 +45,8 @@ public class BluetoothManager extends GodotPlugin {
     private BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
     private LocationManager locationManager;
     private Handler handler = new Handler();
-    private static final long SCAN_PERIOD = 10000;
+
+    private static long ScanPeriod = 10000;
     private BluetoothGatt bluetoothGatt; // This is a reference to the connected device
 
     // Specific
@@ -103,6 +105,14 @@ public class BluetoothManager extends GodotPlugin {
         return reportDuplicates;
     }
 
+    public void setScanPeriod(long scanPeriod)
+    {
+        ScanPeriod = scanPeriod;
+    }
+    public long getScanPeriod()
+    {
+        return ScanPeriod;
+    }
 
     @SuppressWarnings("deprecation")
     @NonNull
@@ -177,9 +187,12 @@ public class BluetoothManager extends GodotPlugin {
                         }
                         bluetoothLeScanner.stopScan(leScanCallback);
                     }
-                }, SCAN_PERIOD);
+                }, ScanPeriod);
 
                 scanning = true;
+                //ScanSettings settings = new ScanSettings.Builder();
+
+
                 bluetoothLeScanner.startScan(leScanCallback);
             }
         } else {
