@@ -133,7 +133,9 @@ public class BluetoothManager extends GodotPlugin {
                 "writeStringToCharacteristic",
                 "readFromCharacteristic",
                 "setReportDuplicates",
-                "getReportDuplicates");
+                "getReportDuplicates",
+                "getScanPeriod",
+                "setScanPeriod");
     }
 
     public void sendDebugSignal(String s) {
