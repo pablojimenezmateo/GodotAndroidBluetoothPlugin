@@ -46,7 +46,7 @@ public class BluetoothManager extends GodotPlugin {
     private LocationManager locationManager;
     private Handler handler = new Handler();
 
-    private static long ScanPeriod = 10000;
+    private int ScanPeriod = 10000;
     private BluetoothGatt bluetoothGatt; // This is a reference to the connected device
 
     // Specific
@@ -105,14 +105,15 @@ public class BluetoothManager extends GodotPlugin {
         return reportDuplicates;
     }
 
-    public void setScanPeriod(long scanPeriod)
+    public void setScanPeriod(int scanPeriod)
     {
         ScanPeriod = scanPeriod;
     }
-    public long getScanPeriod()
-    {
-        return ScanPeriod;
-    }
+
+    public int getScanPeriod() { return ScanPeriod; }
+
+
+    public boolean hasGetScanPeriod() { return true; }
 
     @SuppressWarnings("deprecation")
     @NonNull
@@ -132,10 +133,11 @@ public class BluetoothManager extends GodotPlugin {
                 "writeBytesToCharacteristic",
                 "writeStringToCharacteristic",
                 "readFromCharacteristic",
-                "setReportDuplicates",
-                "getReportDuplicates",
+                "setScanPeriod",
                 "getScanPeriod",
-                "setScanPeriod");
+                "hasGetScanPeriod",
+                "setReportDuplicates",
+                "getReportDuplicates");
     }
 
     public void sendDebugSignal(String s) {
