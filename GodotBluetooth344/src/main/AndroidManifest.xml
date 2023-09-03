@@ -14,9 +14,9 @@
 
     <!-- Request legacy Bluetooth permissions on older devices. -->
     <uses-permission android:name="android.permission.BLUETOOTH"
-        android:maxSdkVersion="30" />
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30" />
+        android:maxSdkVersion="32" />
 
     <!-- Needed only if your app looks for Bluetooth devices.
          If your app doesn't use Bluetooth scan results to derive physical

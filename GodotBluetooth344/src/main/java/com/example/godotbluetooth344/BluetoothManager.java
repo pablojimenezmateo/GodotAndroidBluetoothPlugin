@@ -171,7 +171,7 @@ public class BluetoothManager extends GodotPlugin {
         signals.add(new SignalInfo("_on_characteristic_finding", String.class));
         signals.add(new SignalInfo("_on_characteristic_found", org.godotengine.godot.Dictionary.class));
         signals.add(new SignalInfo("_on_characteristic_read", org.godotengine.godot.Dictionary.class));
-
+        signals.add(new SignalInfo("_on_scan_stopped", String.class));
         return signals;
     }
 
@@ -190,6 +190,8 @@ public class BluetoothManager extends GodotPlugin {
                             return;
                         }
                         bluetoothLeScanner.stopScan(leScanCallback);
+                        emitSignal("_on_scan_stopped", "scanTimedOut");
+
                     }
                 }, ScanPeriod);
 
@@ -213,6 +215,7 @@ public class BluetoothManager extends GodotPlugin {
                 sendDebugSignal("Cannot stop a scan because you do not have Manifest.permission.BLUETOOTH_SCAN");
                 return;
             }
+            //emitSignal("_on_scan_stopped", "stopScan");
             bluetoothLeScanner.stopScan(leScanCallback);
         }
     }
