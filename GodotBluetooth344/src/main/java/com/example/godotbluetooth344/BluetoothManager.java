@@ -1,5 +1,7 @@
 package com.example.godotbluetooth344;
 
+import static android.bluetooth.le.ScanSettings.SCAN_MODE_LOW_LATENCY;
+
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
@@ -46,7 +48,9 @@ public class BluetoothManager extends GodotPlugin {
     private LocationManager locationManager;
     private Handler handler = new Handler();
 
-    private int ScanPeriod = 10000;
+    private ScanSettings settings = null;
+
+    private int ScanPeriod = 100000;
     private BluetoothGatt bluetoothGatt; // This is a reference to the connected device
 
     // Specific
@@ -84,9 +88,15 @@ public class BluetoothManager extends GodotPlugin {
         IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
         context.registerReceiver(mReceiver, filter);
 
+
+
         // Register the listener to the Location Status
         filter = new IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION);
         context.registerReceiver(mGpsSwitchStateReceiver, filter);
+
+        ScanSettings.Builder settingBuilder = new ScanSettings.Builder();
+        settingBuilder.setScanMode(SCAN_MODE_LOW_LATENCY);
+        settings = settingBuilder.build();
     }
 
     @NonNull
@@ -196,10 +206,10 @@ public class BluetoothManager extends GodotPlugin {
                 }, ScanPeriod);
 
                 scanning = true;
-                //ScanSettings settings = new ScanSettings.Builder();
 
 
-                bluetoothLeScanner.startScan(leScanCallback);
+
+                bluetoothLeScanner.startScan(null, settings, leScanCallback );
             }
         } else {
             sendDebugSignal("Cannot start a scan because you do not have location permissions");
